@@ -4,7 +4,6 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby "3.2.2"
 
 gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
-gem 'wdm', '>= 0.1.0' if Gem.win_platform?
 
 gem "rails",           "7.0.4.3"
 gem "bootstrap-sass",  "3.4.1"
