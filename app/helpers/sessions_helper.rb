@@ -24,6 +24,11 @@ module SessionsHelper
     end
   end
 
+  # 渡されたユーザーがカレントユーザーであればtrueを返す
+  def current_user?(user)
+    user && user == current_user
+  end
+
   # 永続的セッションを破棄する
   def forget(user)
     user.forget
@@ -48,6 +53,11 @@ module SessionsHelper
     user.remember
     cookies.permanent.encrypted[:user_id] = user.id
     cookies.permanent[:remember_token] = user.remember_token
+  end
+
+  # アクセスしようとしたURLを保存する
+  def store_location
+    session[:forwarding_url] = request.original_url if request.get?
   end
 
 end

@@ -14,11 +14,13 @@ class SessionsController < ApplicationController
     
     user = User.find_by(email: params[:session][:email].downcase)
     if user&.authenticate(params[:session][:password])
+      forwarding_url = session[:forwarding_url]
       # ユーザーログイン後にユーザー情報のページにリダイレクトする
       reset_session      # ログインの直前に必ずこれを書くこと
       params[:session][:remember_me] == '1' ? remember(user) : forget(user)
       log_in user
-      redirect_to user
+      redirect_to forwarding_url || user
+      session.delete(:forwarding_url)
     else
       # エラーメッセージを作成する
       flash.now[:danger] = 'Invalid email/password combination'
