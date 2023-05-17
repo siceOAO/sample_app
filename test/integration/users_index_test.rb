@@ -1,74 +1,69 @@
-require 'test_helper'
+require "test_helper"
 
-class UsersIndexTest < ActionDispatch::IntegrationTest
-  
+class UsersIndex < ActionDispatch::IntegrationTest
+
   def setup
-    @user = users(:michael)
-    @admin = users(:michael)
+    @admin     = users(:michael)
     @non_admin = users(:archer)
   end
+end
 
-  test "layout links for logged in user" do
-    log_in_as(@user)
-    get root_path
-    assert_template 'static_pages/home'
-    assert_select "a[href=?]", root_path, count: 2
-    assert_select "a[href=?]", help_path
-    assert_select "a[href=?]", about_path
-    assert_select "a[href=?]", contact_path
-    assert_select "a[href=?]", users_path
-    assert_select "a[href=?]", user_path(@user)
-    assert_select "a[href=?]", edit_user_path(@user)
-    assert_select "a[href=?]", logout_path
-  end
+class UsersIndexAdmin < UsersIndex
 
-  test "layout links for not logged in user" do
-    get root_path
-    assert_template 'static_pages/home'
-    assert_select "a[href=?]", root_path, count: 2
-    assert_select "a[href=?]", help_path
-    assert_select "a[href=?]", about_path
-    assert_select "a[href=?]", contact_path
-    assert_select "a[href=?]", login_path
-    assert_select "a[href=?]", users_path, count: 0
-    assert_select "a[href=?]", logout_path, count: 0
-    assert_select "a[href=?]", user_path(@user), count: 0
-    assert_select "a[href=?]", edit_user_path(@user), count: 0
-  end
-
-  test "index including pagination" do
-    log_in_as(@user)
-    get users_path
-    assert_template 'users/index'
-    assert_select 'div.pagination'
-    User.paginate(page: 1).each do |user|
-      assert_select 'a[href=?]', user_path(user), text: user.name
-    end
-  end
-
-  test "index as admin including pagination and delete links" do
+  def setup
+    super
     log_in_as(@admin)
     get users_path
+  end
+end
+
+class UsersIndexAdminTest < UsersIndexAdmin
+
+  test "should render the index page" do
     assert_template 'users/index'
+  end
+
+  test "should paginate users" do
     assert_select 'div.pagination'
-    first_page_of_users = User.paginate(page: 1, pre_page: 15)
+  end
+
+  test "should have delete links" do
+    first_page_of_users = User.where(activated: true).paginate(page: 1)
     first_page_of_users.each do |user|
       assert_select 'a[href=?]', user_path(user), text: user.name
       unless user == @admin
         assert_select 'a[href=?]', user_path(user), text: 'delete'
       end
     end
-    assert_difference 'User.count', -1 do
-      delete user_path(@non_admin)
-      assert_response :see_other
-      assert_redirected_to users_url
-    end
   end
 
-  test "index as non-admin" do
+  test "should be able to delete non-admin user" do
+    assert_difference 'User.count', -1 do
+      delete user_path(@non_admin)
+    end
+    assert_response :see_other
+    assert_redirected_to users_url
+  end
+
+  test "should display only activated users" do
+    # ページにいる最初のユーザーを無効化する。
+    # 無効なユーザーを作成するだけでは、
+    # Railsで最初のページに表示される保証がないので不十分
+    User.paginate(page: 1).first.toggle!(:activated)
+    # /usersを再度取得して、無効化済みのユーザーが表示されていないことを確かめる
+    get users_path      
+    # 表示されているすべてのユーザーが有効化済みであることを確かめる
+    assigns(:users).each do |user|
+      assert user.activated?
+    end
+  end
+end
+
+class UsersNonAdminIndexTest < UsersIndex
+
+  test "should not have delete links as non-admin" do
     log_in_as(@non_admin)
     get users_path
     assert_select 'a', text: 'delete', count: 0
   end
-
 end
